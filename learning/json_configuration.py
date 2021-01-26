@@ -11,18 +11,17 @@ import json
 
 # create first configuration
 
-
 class JSON_Config(object):
     def __init__(self, filepath):
-    
+
         self.filepath = filepath
         self.data = {}
-    
+
     def get_data(self, pyfirmata_format = False): # 'dictionary' /'pyfirmata'
         with open(self.filepath) as json_file:
             self.data = json.load(json_file)
             # print(self.data)
-        
+
         if pyfirmata_format:
             # format so pyfirmata pin can be directly configured/created
             pyfirmata_data = []
@@ -37,7 +36,7 @@ class JSON_Config(object):
             return pyfirmata_data
         else:
             return self.data
-    
+
     def set_data(self, dictionary):
         with open('data.txt', 'w') as outfile:
             json.dump(dictionary, outfile)
@@ -47,19 +46,19 @@ class JSON_Config(object):
         default_file = 'default_config.txt'
         with open(default_file) as json_file:
             self.data = json.load(json_file)
-        
+
         return self.data
-    
+
 
 def write_test():
 
     data = {}
-    data['io_pins'] = [] 
+    data['io_pins'] = []
     """
     usual-pyfermata config = 'd:3:o', type:number:mode
     data['io_pins'].appendd({
         'name': '' #D0..D13,A0..A5
-        'type': '', #digital = ‘d’, analog =‘a’ 
+        'type': '', #digital = ‘d’, analog =‘a’
         'mode': 'i', # ‘i’,‘o’ input/output ‘p’ for pwm).
         'is_pwm': True # True/False
         'is_analog':
@@ -84,7 +83,7 @@ def write_test():
                    'A3',
                    'A4',
                    'A5']
-    
+
     # 'mode': 'i', # ‘i’,‘o’ input/output ‘p’ for pwm).
     pin_mode = ['i',
                 'i',
@@ -104,7 +103,7 @@ def write_test():
                 'i',
                 'i',
                 'i']
-    
+
     pin_number = ['2',
                   '3',
                   '4',
@@ -123,7 +122,7 @@ def write_test():
                   '3',
                   '4',
                   '5']
-    
+
     pin_type = ['d',
                 'd',
                 'd',
@@ -161,7 +160,7 @@ def write_test():
              False,
              False,
              False]
-    
+
     is_analog = [False,
              False,
              False,
@@ -190,15 +189,15 @@ def write_test():
         pin['is_pwm'] = is_pwm[i]
         pin['is_analog'] = is_analog[i]
         data['io_pins'].append(pin)
-    
+
     # print(data)
-    configuration.set_data(data)    
+    configuration.set_data(data)
 
 def read_test():
-    print(configuration.get_data(False))       
+    print(configuration.get_data(False))
 #-----------------------------
 if __name__ == "__main__":
     configuration = JSON_Config('configuration.txt')
 
-    # write_test()    
+    # write_test()
     read_test()

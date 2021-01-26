@@ -4,28 +4,26 @@ Created on Mon Jan 25 15:21:34 2021
 
 @author: crtjur
 """
-from tkinter import *
+import tkinter as tk
 
 from PIL import Image, ImageTk
 
-root = Tk()
+root = tk.Tk()
 root.title("Title")
-root.geometry("600x600")
+root.geometry("280x350")
 root.configure(background="black")
 
-
-
-class Example(Frame):
+class Example(tk.Frame):
     def __init__(self, master, *pargs):
-        Frame.__init__(self, master, *pargs)
+        tk.Frame.__init__(self, master, *pargs)
 
-        self.image = Image.open("./graphics/arduino-uno.png")
+        self.image = Image.open("diagram-v2.png")
         self.img_copy= self.image.copy()
 
         self.background_image = ImageTk.PhotoImage(self.image)
 
-        self.background = Label(self, image=self.background_image)
-        self.background.pack(fill=BOTH, expand=YES)
+        self.background = tk.Label(self, image=self.background_image)
+        self.background.pack(fill= tk.BOTH, expand=True) #,
         self.background.bind('<Configure>', self._resize_image)
 
     def _resize_image(self,event):
@@ -41,7 +39,6 @@ class Example(Frame):
 
 
 e = Example(root)
-e.pack(fill=BOTH, expand=YES)
-
+e.pack(fill=tk.BOTH, expand=True)
 
 root.mainloop()
