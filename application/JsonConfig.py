@@ -26,10 +26,11 @@ class JsonConfig(object):
             for pin in self.data['io_pins']:
                 # print(pin)
                 #     pin = data['io_pins'][i]
-                pin_mode = pin['mode']
-                pin_number = pin['number']
                 pin_type = pin['type']
-                string = pin_mode+':'+pin_number+':'+pin_type
+                pin_number = pin['number']
+                pin_mode = pin['mode']
+                # type:number:mode (a:0:i)
+                string = pin_type+':'+pin_number+':'+pin_mode
                 pyfirmata_data.append(string)
             return pyfirmata_data
         else:
@@ -49,7 +50,7 @@ class JsonConfig(object):
 
 
 def write_test():
-
+    # 'mode': 'i', # ‘i’,‘o’ input/output ‘p’ for pwm).
     data = {}
     data['io_pins'] = []
     """
@@ -82,7 +83,6 @@ def write_test():
                    'A4',
                    'A5']
 
-    # 'mode': 'i', # ‘i’,‘o’ input/output ‘p’ for pwm).
     pin_mode = ['i',
                 'i',
                 'i',
@@ -196,18 +196,17 @@ def write_test():
              True,
              True,
              True]
-
+    # type:number:mode (a:0:i)
     for i in range(len(pin_name)):
         pin = {}
-        pin['name'] = pin_name[i]
-        pin['mode'] = pin_mode[i]
-        pin['number'] = pin_number[i]
         pin['type'] = pin_type[i]
+        pin['number'] = pin_number[i]
+        pin['mode'] = pin_mode[i]
+        pin['name'] = pin_name[i]
         pin['is_pwm'] = is_pwm[i]
         pin['is_analog'] = is_analog[i]
         pin['enabled'] = enabled[i]
         data['io_pins'].append(pin)
-
 
     # print(data)
     configuration.set_data(data)
