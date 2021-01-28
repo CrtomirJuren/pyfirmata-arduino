@@ -40,13 +40,16 @@ class ConfigurationGUI(object):
     """
     {"name": "D2",
     "mode": "i",
-    "number": "2", 
-    "type": "d", 
+    "number": "2",
+    "type": "d",
     "is_pwm": false,
     "is_analog": false,
     "enabled": true}
     """
-    def __init__(self):
+    def __init__(self, root):
+
+        self.root = root
+
         self.win = tk.Toplevel()
         self.win.title('IO Configuration')
         self.win.geometry("680x380")
@@ -69,55 +72,95 @@ class ConfigurationGUI(object):
         self.config_obj = JsonConfig('configuration.txt')
         self.config_data = self.config_obj.get_data(False)
         # print(json_config.get_data(False))
-    
+
         self._create_left_widgets()
         self._create_middle_widgets()
-     
+
     def _on_closing(self):
         if msg.askokcancel("Quit", "Do you want to save new configuration?"):
             self.save_configuration()
-        
-        self.win.destroy()
-        
+            # trigger new controls configuration at parent
+            self.root.reconfiguration = True
 
-        
+        self.win.destroy()
+
     def _create_middle_widgets(self):
         load = Image.open("diagram-v2.png")
         render = ImageTk.PhotoImage(load)
         img = tk.Label(self.middle_frame, image=render)
         img.image = render
         img.place(x=0, y=0)
-            
+
     def _create_left_widgets(self):
         # for input/output selectiong
-        mode = ["i","o"] #etc
-
+        # (‘i’ for input, ‘o’ for output, ‘p’ for pwm).
         # 1st create frame for the control/indicator
         # each pin will have its own variables
+
         self.mode_vars = []
+
         for index, io_pin in enumerate(self.config_data['io_pins']):
+
+            if io_pin['is_analog']:
+                # analog pins are in left frame
+                frame = self.left_frame
+            else:
+                # digital pins are in right frame
+                frame = self.right_frame
+
+            if io_pin['is_pwm']:
+                mode = ["", "Input", "Output", "PWM"] # add "" beacuse of tkk.optionmenu bug
+            else:
+                mode = ["", "Input", "Output"] #etc
+
+            mode_value = ''
+            if io_pin['mode'] == 'i':
+                mode_value = 'Input'
+            if io_pin['mode'] == 'o':
+                mode_value = 'Output'
+            if io_pin['mode'] == 'p':
+                mode_value = 'PWM'
 
             mode_var = tk.StringVar()
-            mode_var.set(io_pin['mode']) # default value
+            mode_var.set(mode_value)
+            # mode_var.set(io_pin['mode']) # default value
+
             self.mode_vars.append(mode_var)
             # print(io_pin)
-            self.frame_widget = Frame(self.left_frame, bg='white', pady=3, highlightbackground="black", highlightthickness=1)
+            self.frame_widget = Frame(frame, bg='white', pady=3, highlightbackground="black", highlightthickness=1)
             self.frame_widget.pack()
-            self.lbl = tk.Label(self.frame_widget, text = io_pin['name'] , width = 10)
-            
-            self.mode_opt = tk.OptionMenu(self.frame_widget, self.mode_vars[index], *mode)
 
-            self.lbl.grid(row=0, column=0)
-            self.mode_opt.grid(row=0, column=1)
-    
+            # create lable
+            self.mode_lbl = tk.Label(self.frame_widget, text = io_pin['name'], width = 10)
+            # create mode
+            # print(io_pin['mode'])
+            # self.mode_drop = tk.OptionMenu(self.frame_widget, self.mode_vars[index], *mode) # * unpacking
+            # self.mode_drop = ttk.OptionMenu(self.frame_widget, self.mode_vars[index], *mode) # * unpacking
+            self.mode_drop = ttk.OptionMenu(self.frame_widget, self.mode_vars[index], *mode) # * unpacking
+            self.mode_drop.config(width=10)
+
+            # grid
+            self.mode_lbl.grid(row=0, column=0)
+            self.mode_drop.grid(row=0, column=1)
+
+
     def save_configuration(self):
+        # translate value of controls to configuration data
         for index, io_pin in enumerate(self.config_data['io_pins']):
-            self.config_data['io_pins'][index]['mode'] = self.mode_vars[index].get()
-            
+            if self.mode_vars[index].get() == 'Input':
+                variable = 'i'
+            if self.mode_vars[index].get() == 'Output':
+                variable = 'o'
+            if self.mode_vars[index].get() == 'PWM':
+                variable = 'p'
+            # change configuration cdictionary values
+            self.config_data['io_pins'][index]['mode'] = variable
+
+        # save dictionary to json object file
         self.config_obj.set_data(self.config_data)
-            
-    
-        
+
+
+
 
 class GUI_IO_control(tk.Frame):
     def __init__(self, parent, parent_frame, board = None, pin_config = None, *args, **kwargs):
@@ -144,6 +187,11 @@ class GUI_IO_control(tk.Frame):
         None.
 
         """
+        # each widget has its own variable so it can be easily configured
+        # self.mode_vars = []
+        self.mode_var = tk.StringVar()
+        self.string_var = tk.StringVar()
+
         # tk.Frame.__init__(self, parent)
         self.parent = parent
         self.parent_frame = parent_frame
@@ -151,7 +199,7 @@ class GUI_IO_control(tk.Frame):
 
         # 1st create frame for the control/indicator
         self.frame = Frame(self.parent_frame, bg='white', pady=3, highlightbackground="black", highlightthickness=1)
-        self.frame.pack()
+        self.frame.pack(fill=tk.X)
 
         self.board = board
 
@@ -164,10 +212,8 @@ class GUI_IO_control(tk.Frame):
         self.pin_type, self.pin_number, self.pin_mode = pin_config.split(':')
         # print(pin_type, pin_number, pin_mode)
 
-
-
-        self.lbl = tk.Label(self.frame, text = self.pin_number, width = 10)
-
+        self.lbl = tk.Label(self.frame, text = self.pin_number, width = 5)
+        self.mode_lbl = tk.Label(self.frame, width = 5, textvariable = self.mode_var)  # without text and textvariable
 
 
         # if digital output
@@ -183,22 +229,22 @@ class GUI_IO_control(tk.Frame):
         # if analog input
         if self.pin_type == 'a' and self.pin_mode == 'i':
             # initialize variable
-            self.string_var = tk.StringVar()
             self.string_var.set('0.00')
             self.value_label = tk.Label(self.frame, width = 5, textvariable = self.string_var)  # without text and textvariable
 
         # grid
-        self.lbl.grid(column=0, row=0)
+        self.lbl.grid(row=0, column=0)
+        self.mode_lbl.grid(row = 0, column = 1)
 
         if self.pin_type == 'd' and self.pin_mode == 'o':
-            self.btn.grid(column=1, row=0)
+            self.btn.grid(column=2, row=0)
 
         if self.pin_type == 'd' and self.pin_mode == 'i':
-            self.led.grid(column=1, row=0) #,ipadx="1m",ipady="1m"
+            self.led.grid(column=2, row=0) #,ipadx="1m",ipady="1m"
 
         # if analog input
         if self.pin_type == 'a' and self.pin_mode == 'i':
-            self.value_label.grid(column=1, row=0)
+            self.value_label.grid(column=2, row=0)
 
     def clicked(self):
         if self.btn['text'] == "High":
@@ -212,8 +258,12 @@ class GUI_IO_control(tk.Frame):
             if self.parent.is_hardware:
                 self.pin_class.write(True)
 
-    def read(self):
+    def configure(self, pyfirmata_config):
+        print(pyfirmata_config)
 
+        # self.mode_var.set(mode_value)
+
+    def read(self):
         # if pin is digital and input
         if self.pin_type == 'd' and self.pin_mode == 'i':
             if self.parent.is_hardware:
@@ -240,6 +290,104 @@ class GUI_IO_control(tk.Frame):
                 display = "{:.4f}".format(analog_value)
                 self.string_var.set(display)
 
+
+class GUI_IO_control2(tk.Frame):
+    def __init__(self, parent, parent_frame, *args, **kwargs):
+
+
+
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.parent_frame = parent_frame
+        self.state = False
+
+        # 1st create frame for the control/indicator
+        self.frame = Frame(self.parent_frame, bg='white', pady=3, highlightbackground="black", highlightthickness=1)
+        self.frame.pack(fill=tk.X)
+
+        # each widget has its own variable so it can be easily configured
+        # self.mode_vars = []
+        self.pin_number_var = tk.StringVar()
+        self.pin_mode_var = tk.StringVar()
+        self.string_var = tk.StringVar()
+
+        self.string_var.set('0.00')
+
+
+        # pin number: label
+        # self.lbl = tk.Label(self.frame, text = self.pin_number, width = 5)
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, textvariable = self.pin_number_var)
+        # mode: label
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, textvariable = self.pin_mode_var)  # without text and textvariable
+        # output control: button
+        self.pin_state_btn = tk.Button(self.frame, text="Low", relief=tk.SUNKEN, width = 5, command=self.clicked)
+        # digital input led: canvas
+        self.led = tk.Canvas(self.frame, height=25, width=25)
+        self.led.create_oval(5,5,20,20, fill='red', tags="led")
+        # analog input indicator
+        self.value_label = tk.Entry(self.frame, width = 5, textvariable = self.string_var)  # without text and textvariable
+        # analog output control
+
+        # if digital input
+        # if self.pin_type == 'd' and self.pin_mode == 'i':
+        # if self.pin_type == 'd' and self.pin_mode == 'o':
+        # if self.pin_type == 'a' and self.pin_mode == 'i':
+        # if self.pin_type == 'a' and self.pin_mode == 'o':
+        # if self.pin_type == 'p' and self.pin_mode == 'o':
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.pin_state_btn.grid(row=0,column=2)
+        self.led.grid(row=0,column=3)
+        self.value_label.grid(row=0,column=4)
+
+    def clicked(self):
+        if self.btn['text'] == "High":
+            self.btn.configure(text="Low", relief=tk.SUNKEN)
+            # self.lbl.configure(text="  ON  ", bg="green")
+            if self.parent.is_hardware:
+                self.pin_class.write(False)
+        else:
+            self.btn.configure(text="High", relief=tk.RAISED)
+            # self.lbl.configure(text="  OFF ", bg="red")
+            if self.parent.is_hardware:
+                self.pin_class.write(True)
+
+    def configure(self, pyfirmata_config):
+        print(pyfirmata_config)
+
+        # self.mode_var.set(mode_value)
+
+    def read(self):
+        # if pin is digital and input
+        if self.pin_type == 'd' and self.pin_mode == 'i':
+            if self.parent.is_hardware:
+                self.state = self.pin_class.read()
+            else:
+                number = random.uniform(0,100)
+                if number > 95:
+                    self.state = not self.state
+
+            if self.state:
+                colour = 'green'
+            else:
+                colour = 'red'
+            self.led.itemconfig("led", fill = colour)
+            self.led.update()
+
+        # if pin is analog and input
+        if self.pin_type == 'a' and self.pin_mode == 'i':
+            if self.parent.is_hardware:
+                analog_value = self.pin_class.read()
+            else:
+                analog_value = random.uniform(9, 10.0)
+                # print(self.pin_class.read())
+                display = "{:.4f}".format(analog_value)
+                self.string_var.set(display)
+
+
+
 class MainGUI(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
 
@@ -265,6 +413,8 @@ class MainGUI(tk.Frame):
                      'a:5:i']
 
         self.parent = parent
+        self.reconfiguration = False
+        self.gui_io_controls = []
 
         self.is_hardware = False
         # set title
@@ -273,6 +423,7 @@ class MainGUI(tk.Frame):
         self.parent.iconbitmap("./graphics/python.ico")
         # set size
         self.parent.geometry("500x500")
+
         # self.parent.bind('<Escape>', self.button_exit_call())
 
         # if not self.is_hardware:
@@ -290,7 +441,7 @@ class MainGUI(tk.Frame):
             print("Setting up the connection to the board ...")
             self.board = pyfirmata2.Arduino(self.port)
             # enable arduino sampling --> for inputs
-            self.board.samplingOn()
+            # self.board.samplingOn()
         else:
             self.board = None
 
@@ -305,22 +456,31 @@ class MainGUI(tk.Frame):
         self._create_left_widgets()
         self._create_right_widgets()
 
+        # self._configure_widgets()
         self._run()
 
         # progress bar counter
         self.progress_cnt = 0
-        
-        
+
+    def _reconfigure(self):
+
+        print('reconfiguring')
+        self.config_obj = JsonConfig('configuration.txt')
+
+        pin_config_list = self.config_obj.get_data(True)
+
+        for index, pin_config in enumerate(pin_config_list):
+            self.gui_io_controls[index].configure(pin_config)
+
+
     def _open_config_win(self):
-        ConfigurationGUI()
+        # run class
+        ConfigurationGUI(self)
 
     def _create_left_widgets(self):
 
-        # create one output
-        self.gui_io_controls = []
-
         for pin_config in self.pin_configurations:
-            self.gui_io_controls.append(GUI_IO_control(self, self.left_frame, self.board, pin_config))
+            self.gui_io_controls.append(GUI_IO_control2(self, self.left_frame))
             # arduino_io_2 = self.board.get_pin('d:2:o')
             # self.io_control_2 = IO_control(self.left_frame, arduino_io_2, 'd:2:o')
 
@@ -373,6 +533,12 @@ class MainGUI(tk.Frame):
         #now = time.strftime(("%H:%M:%S.%f")[:-3])
         now = datetime.utcnow().strftime('%H:%M:%S.%f')[:-3]
         # used to show that app is running
+        # this flag is set at first start of app and after setting change
+        if self.reconfiguration:
+            self.reconfiguration = False
+            self._reconfigure()
+
+
         self.update_progress_bar()
 
         if self.is_hardware:
