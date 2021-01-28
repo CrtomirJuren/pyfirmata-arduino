@@ -9,9 +9,7 @@ json --> dictionary
 
 import json
 
-# create first configuration
-
-class JSON_Config(object):
+class JsonConfig(object):
     def __init__(self, filepath):
 
         self.filepath = filepath
@@ -38,7 +36,7 @@ class JSON_Config(object):
             return self.data
 
     def set_data(self, dictionary):
-        with open('data.txt', 'w') as outfile:
+        with open(self.filepath, 'w') as outfile:
             json.dump(dictionary, outfile)
 
     def get_default(self):
@@ -179,6 +177,25 @@ def write_test():
              True,
              True,
              True]
+    
+    enabled = [True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True,
+             True]
 
     for i in range(len(pin_name)):
         pin = {}
@@ -188,7 +205,9 @@ def write_test():
         pin['type'] = pin_type[i]
         pin['is_pwm'] = is_pwm[i]
         pin['is_analog'] = is_analog[i]
+        pin['enabled'] = enabled[i]
         data['io_pins'].append(pin)
+
 
     # print(data)
     configuration.set_data(data)
@@ -197,7 +216,7 @@ def read_test():
     print(configuration.get_data(False))
 #-----------------------------
 if __name__ == "__main__":
-    configuration = JSON_Config('configuration.txt')
+    configuration = JsonConfig('configuration.txt')
 
-    # write_test()
-    read_test()
+    write_test()
+    # read_test()
