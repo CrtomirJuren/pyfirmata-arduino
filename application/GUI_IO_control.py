@@ -14,112 +14,6 @@ from tkinter import Frame
 from JsonConfig import JsonConfig
 
 class GUI_IO_control(tk.Frame):
-    def __init__(self, parent, parent_frame, board = None, pin_config = None, *args, **kwargs):
-        # each widget has its own variable so it can be easily configured
-        # self.mode_vars = []
-        self.mode_var = tk.StringVar()
-        self.string_var = tk.StringVar()
-
-        # tk.Frame.__init__(self, parent)
-        self.parent = parent
-        self.parent_frame = parent_frame
-        self.state = False
-
-        # 1st create frame for the control/indicator
-        self.frame = Frame(self.parent_frame, bg='white', pady=3, highlightbackground="black", highlightthickness=1)
-        self.frame.pack(fill=tk.X)
-
-        self.board = board
-
-        if self.parent.is_hardware:
-            self.pin_class = self.board.get_pin(pin_config)
-
-            if self.pin_mode == 'i':
-                self.pin_class.enable_reporting()
-
-        self.pin_type, self.pin_number, self.pin_mode = pin_config.split(':')
-        # print(pin_type, pin_number, pin_mode)
-
-        self.lbl = tk.Label(self.frame, text = self.pin_number, width = 5)
-        self.mode_lbl = tk.Label(self.frame, width = 5, textvariable = self.mode_var)  # without text and textvariable
-
-
-        # if digital output
-        if self.pin_type == 'd' and self.pin_mode == 'o':
-            self.btn = tk.Button(self.frame, text="Low", relief=tk.SUNKEN, width = 5, command=self.clicked)
-            # create frame for the button
-
-        # if digital input
-        if self.pin_type == 'd' and self.pin_mode == 'i':
-            self.led = tk.Canvas(self.frame, height=25, width=25)
-            self.led.create_oval(5,5,20,20, fill='red', tags="led")
-
-        # if analog input
-        if self.pin_type == 'a' and self.pin_mode == 'i':
-            # initialize variable
-            self.string_var.set('0.00')
-            self.value_label = tk.Label(self.frame, width = 5, textvariable = self.string_var)  # without text and textvariable
-
-        # grid
-        self.lbl.grid(row=0, column=0)
-        self.mode_lbl.grid(row = 0, column = 1)
-
-        if self.pin_type == 'd' and self.pin_mode == 'o':
-            self.btn.grid(column=2, row=0)
-
-        if self.pin_type == 'd' and self.pin_mode == 'i':
-            self.led.grid(column=2, row=0) #,ipadx="1m",ipady="1m"
-
-        # if analog input
-        if self.pin_type == 'a' and self.pin_mode == 'i':
-            self.value_label.grid(column=2, row=0)
-
-    def clicked(self):
-        if self.btn['text'] == "High":
-            self.btn.configure(text="Low", relief=tk.SUNKEN)
-            # self.lbl.configure(text="  ON  ", bg="green")
-            if self.parent.is_hardware:
-                self.pin_class.write(False)
-        else:
-            self.btn.configure(text="High", relief=tk.RAISED)
-            # self.lbl.configure(text="  OFF ", bg="red")
-            if self.parent.is_hardware:
-                self.pin_class.write(True)
-
-    def configure(self, pyfirmata_config):
-        print(pyfirmata_config)
-
-        # self.mode_var.set(mode_value)
-
-    def read(self):
-        # if pin is digital and input
-        if self.pin_type == 'd' and self.pin_mode == 'i':
-            if self.parent.is_hardware:
-                self.state = self.pin_class.read()
-            else:
-                number = random.uniform(0,100)
-                if number > 95:
-                    self.state = not self.state
-
-            if self.state:
-                colour = 'green'
-            else:
-                colour = 'red'
-            self.led.itemconfig("led", fill = colour)
-            self.led.update()
-
-        # if pin is analog and input
-        if self.pin_type == 'a' and self.pin_mode == 'i':
-            if self.parent.is_hardware:
-                analog_value = self.pin_class.read()
-            else:
-                analog_value = random.uniform(9, 10.0)
-                # print(self.pin_class.read())
-                display = "{:.4f}".format(analog_value)
-                self.string_var.set(display)
-
-
-class GUI_IO_control2(tk.Frame):
     def __init__(self, parent, parent_frame, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
@@ -169,17 +63,18 @@ class GUI_IO_control2(tk.Frame):
         self.pin_state_btn.grid(row=0,column=2)
         self.led.grid(row=0,column=3)
         self.value_label.grid(row=0,column=4)
-
+    
+    
     def clicked(self):
         if self.pin_state_btn['text'] == "High":
             self.pin_state_btn.configure(text="Low", relief=tk.SUNKEN)
             # self.lbl.configure(text="  ON  ", bg="green")
-            if self.parent.is_hardware:
+            if not self.simulated:
                 self.pin_class.write(False)
         else:
             self.pin_state_btn.configure(text="High", relief=tk.RAISED)
             # self.lbl.configure(text="  OFF ", bg="red")
-            if self.parent.is_hardware:
+            if not self.simulated:
                 self.pin_class.write(True)
 
     def configure(self, pyfirmata_config):
@@ -270,33 +165,316 @@ class GUI_IO_control2(tk.Frame):
                 self.string_var.set(display)
 
 
-def main():
+class DigitalOutput():
+    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.frame = frame
+
+        self.pin_type = pin_type
+        self.pin_number = pin_number
+        self.pin_mode = pin_mode
+        self.simulated = simulated
+        
+        # pin number: label
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'DO')  # without text and textvariable
+        # output control: button
+        self.pin_state_btn = tk.Button(self.frame, text="Low", relief=tk.SUNKEN, width = 5, command=self.clicked)
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.pin_state_btn.grid(row=0,column=2)
+    
+    def destroy(self):
+        # destroy widgets in frame
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        # destroy frame
+        self.frame.destroy()
+    
+    def clicked(self):
+        if self.pin_state_btn['text'] == "High":
+            self.pin_state_btn.configure(text="Low", relief=tk.SUNKEN)
+            # self.lbl.configure(text="  ON  ", bg="green")
+            if not self.simulated:
+                self.pin_class.write(False)
+        else:
+            self.pin_state_btn.configure(text="High", relief=tk.RAISED)
+            # self.lbl.configure(text="  OFF ", bg="red")
+            if not self.simulated:
+                self.pin_class.write(True)
+
+    def read(self):
+        pass
+    
+    def write(self):
+        pass
+
+class DigitalInput():
+    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.frame = frame
+
+        self.pin_type = pin_type
+        self.pin_number = pin_number
+        self.pin_mode = pin_mode
+        self.simulated = simulated        
+        # pin number: label
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'DI')  # without text and textvariable
+        # digital input led: canvas
+        self.led = tk.Canvas(self.frame, height=20, width=20)
+        self.led.create_oval(5,5,20,20, fill='white', tags="led")
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.led.grid(row=0,column=2)
+    
+    def destroy(self):
+        # destroy widgets in frame
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        # destroy frame
+        self.frame.destroy()
+    
+    def clicked(self):
+        pass
+
+    def read(self):
+        if not self.simulated:
+            self.state = self.pin_class.read()
+        else:
+            number = random.uniform(0,100)
+            if number > 95:
+                self.state = not self.state
+
+        if self.state:
+            colour = 'green'
+        else:
+            colour = 'red'
+       
+        self.led.itemconfig("led", fill = colour)
+        self.led.update()
+    
+    def write(self):
+        pass            
+    
+class AnalogInput():
+    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.frame = frame
+
+        self.pin_type = pin_type
+        self.pin_number = pin_number
+        self.pin_mode = pin_mode
+        self.simulated = simulated        
+        #Output Floats on right Side
+        self.value_var = tk.DoubleVar()
+        self.value_var.set('_.__')
+
+        # pin number: label
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'AI')  # without text and textvariable
+
+        self.entry = tk.Entry(self.frame, width = 5, bd =5, state='disabled', textvariable=self.value_var)
+        self.unit_lbl = tk.Label(self.frame, width = 5, text = '[V]')
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.entry.grid(row=0,column=2)
+        self.unit_lbl.grid(row=0,column=3)
+    
+    def destroy(self):
+        # destroy widgets in frame
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        # destroy frame
+        self.frame.destroy()
+    
+    def clicked(self):
+        pass
+    
+    def read(self):
+        if not self.simulated:
+            analog_value = self.pin_class.read()
+        else:
+            analog_value = random.uniform(9, 10.0)
+            # print(self.pin_class.read())
+            display = "{:.4f}".format(analog_value)
+            self.string_var.set(display)
+
+class AnalogOutput():
+    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.frame = frame
+
+        self.pin_type = pin_type
+        self.pin_number = pin_number
+        self.pin_mode = pin_mode
+        self.simulated = simulated        
+        #Output Floats on right Side
+        self.value_var = tk.DoubleVar()
+        self.value_var.set('_.__')
+
+        # pin number: label
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'AO')  # without text and textvariable
+
+        self.entry = tk.Entry(self.frame, width = 5, bd =5, textvariable=self.value_var)
+        self.unit_lbl = tk.Label(self.frame, width = 5, text = '[V]')
+        self.pin_state_btn = tk.Button(self.frame, text="Disabled", relief=tk.SUNKEN, width = 5, command=self.clicked)
+
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.entry.grid(row=0,column=2)
+        self.unit_lbl.grid(row=0,column=3)
+        self.pin_state_btn.grid(row=0,column=4)
+    
+    def destroy(self):
+        # destroy widgets in frame
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        # destroy frame
+        self.frame.destroy()
+    
+    def clicked(self):
+        if self.pin_state_btn['text'] == "Enabled":
+            self.pin_state_btn.configure(text="Disabled", relief=tk.SUNKEN)
+            # self.lbl.configure(text="  ON  ", bg="green")
+            if not self.simulated:
+                pass
+        else:
+            self.pin_state_btn.configure(text="Enabled", relief=tk.RAISED)
+            # self.lbl.configure(text="  OFF ", bg="red")
+            if not self.simulated:
+                pass
+
+    def read(self):
+        pass
+
+    def write(self):
+        pass
+
+class PWMOutput():
+    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+
+        # tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.frame = frame
+
+        self.pin_type = pin_type
+        self.pin_number = pin_number
+        self.pin_mode = pin_mode
+        self.simulated = simulated     
+        
+        self.value_var = tk.IntVar()
+        self.value_var.set('___')
+        
+        # pin number: label
+        self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
+        self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'PWM')  # without text and textvariable
+        self.entry = tk.Entry(self.frame, width = 5, bd =5, textvariable=self.value_var)
+        self.unit_lbl = tk.Label(self.frame, width = 5, text = '[%]')
+
+        self.pin_state_btn = tk.Button(self.frame, text="Disabled", relief=tk.SUNKEN, width = 5, command=self.clicked)
+
+
+        # grid
+        self.pin_number_lbl.grid(row=0,column=0)
+        self.pin_mode_lbl.grid(row=0,column=1)
+        self.pin_state_btn.grid(row=0,column=3)
+        
+        
+    def destroy(self):
+        # destroy widgets in frame
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        # destroy frame
+        self.frame.destroy()
+    
+    def clicked(self):
+        if self.pin_state_btn['text'] == "Enabled":
+            self.pin_state_btn.configure(text="Disabled", relief=tk.SUNKEN)
+            # self.lbl.configure(text="  ON  ", bg="green")
+            if not self.simulated:
+                pass
+        else:
+            self.pin_state_btn.configure(text="Enabled", relief=tk.RAISED)
+            # self.lbl.configure(text="  OFF ", bg="red")
+            if not self.simulated:
+                pass
+            
+    def read(self):
+        pass
+    
+    def write(self):
+        pass
+
+    
+io_controls = []
+
+def delete_frames():
+    global io_controls    
+    control = io_controls.pop()
+    control.destroy()
+
+def main():
+    global io_controls 
+    simulated = True
+    
     root = tk.Tk()
 
-    root.title("Welcome to LikeGeeks app")
+    root.title("app")
     root.attributes("-topmost", True)
     root.lift()
 
-    frame = Frame(root, bg="silver")
-    frame.pack(side = "right", fill="y", padx = 5, pady = 5)
+    button = tk.Button(root, text="Press to Delete frames", command=delete_frames)
+    button.pack()
 
     # first load configuration for buttons data
     config_obj = JsonConfig('configuration.txt')
     pyfirmata_config_list = config_obj.get_data(True)
-
-    print(pyfirmata_config_list)
-
-    gui_io_controls = []
-
-    # 1. create widgets
-    for index in range(len(pyfirmata_config_list)):
-        gui_io_controls.append(GUI_IO_control2(root, frame))
-
+    
     # 1. configure widgets
     for index, pyfirmata_config in enumerate(pyfirmata_config_list):
-           gui_io_controls[index].configure(pyfirmata_config)
+        frame = tk.Frame(root, bg="silver")
+        # frame.pack(fill="x", padx = 5, pady = 5) #side = "right", 
+        frame.pack(fill= tk.BOTH, padx = 5, pady = 5) #side = "right", 
 
+        pin_type = pyfirmata_config.split(':')[0]
+        pin_number = pyfirmata_config.split(':')[1]
+        pin_mode = pyfirmata_config.split(':')[2]
+        # digital_input'
+        if pin_type == 'd' and pin_mode == 'i':
+            control = DigitalInput(root, frame, pin_type, pin_number, pin_mode, simulated)
+        #'digital_output'
+        if pin_type == 'd' and pin_mode == 'o':
+            control = DigitalOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+        # 'analog_input'    
+        if pin_type == 'a' and pin_mode == 'i':
+            control = AnalogInput(root, frame, pin_type, pin_number, pin_mode, simulated)
+        # 'analog_output'
+        if pin_type == 'a' and pin_mode == 'o':
+            control = AnalogOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+        # 'pwm_output'    
+        if pin_type == 'p' and pin_mode == 'o': 
+            control = PWMOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+        
+        io_controls.append(control)
+        
     # lbl = tk.Label(frame, text="Hello")
     # lbl.grid(column=0, row=0)
 

@@ -30,7 +30,7 @@ from pyfirmata2 import Arduino
 # my files
 from JsonConfig import JsonConfig
 from PopupWindowConfiguration import PopupWindowConfiguration
-from GUI_IO_control import GUI_IO_control, GUI_IO_control2
+from GUI_IO_control import *
 
 APP_TITLE = ("Python GUI Template")
 LARGE_FONT = ("Verdana", 12)
@@ -61,7 +61,7 @@ class MainGUI(tk.Frame):
 
         self.parent = parent
         self.reconfiguration = False
-        self.gui_io_controls = []
+        self.io_controls = []
 
         self.is_hardware = False
         # set title
@@ -103,18 +103,12 @@ class MainGUI(tk.Frame):
         # progress bar counter
         self.progress_cnt = 0
         
-        # after everything is initialized
-        self._reconfigure_widgets()
+        # # after everything is initialized
+        # self._reconfigure_widgets()
 
     def _reconfigure_widgets(self):
         # type:number:mode (a:0:i)
-        # print('reconfiguring')
-        self.config_obj = JsonConfig('configuration.txt')
-        self.pyfirmata_config_list = self.config_obj.get_data(True)
-        # print(self.pyfirmata_config_list)
-
-        for index, pyfirmata_config in enumerate(self.pyfirmata_config_list):
-            self.gui_io_controls[index].configure(pyfirmata_config)
+        pass
 
 
     def _open_config_win(self):
@@ -123,12 +117,36 @@ class MainGUI(tk.Frame):
 
     def _create_left_widgets(self):
         
-        # for pin_config in self.pin_configurations:
-            # pass
-        # create 19 controls
-        for index in range(len(self.pyfirmata_config_list)):
-            self.gui_io_controls.append(GUI_IO_control2(self, self.left_frame))
-
+        # first load configuration for buttons data
+        config_obj = JsonConfig('configuration.txt')
+        pyfirmata_config_list = config_obj.get_data(True)
+        
+        for index, pyfirmata_config in enumerate(pyfirmata_config_list):
+            frame = tk.Frame(root, bg="silver")
+            # frame.pack(fill="x", padx = 5, pady = 5) #side = "right", 
+            frame.pack(fill= tk.BOTH, padx = 5, pady = 5) #side = "right", 
+    
+            pin_type = pyfirmata_config.split(':')[0]
+            pin_number = pyfirmata_config.split(':')[1]
+            pin_mode = pyfirmata_config.split(':')[2]
+            # digital_input'
+            if pin_type == 'd' and pin_mode == 'i':
+                control = DigitalInput(root, frame, pin_type, pin_number, pin_mode)
+            #'digital_output'
+            if pin_type == 'd' and pin_mode == 'o':
+                control = DigitalOutput(root, frame, pin_type, pin_number, pin_mode)
+            # 'analog_input'    
+            if pin_type == 'a' and pin_mode == 'i':
+                control = AnalogInput(root, frame, pin_type, pin_number, pin_mode)
+            # 'analog_output'
+            if pin_type == 'a' and pin_mode == 'o':
+                control = AnalogOutput(root, frame, pin_type, pin_number, pin_mode)
+            # 'pwm_output'    
+            if pin_type == 'p' and pin_mode == 'o': 
+                control = PWMOutput(root, frame, pin_type, pin_number, pin_mode)
+            
+            self.io_controls.append(control)
+            
     def _create_right_widgets(self):
         # add progress bar
         self.progress_bar = ttk.Progressbar(self.right_frame, orient="horizontal",

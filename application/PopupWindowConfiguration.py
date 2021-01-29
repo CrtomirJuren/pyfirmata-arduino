@@ -145,15 +145,16 @@ def main():
     
     root = tk.Tk()
     
-    root.title("Welcome to LikeGeeks app")
+    root.title("app")
+    root.geometry("500x500")
     root.attributes("-topmost", True)
     root.lift()
     
     frame = Frame(root, bg="silver")
     frame.pack(side = "right", fill="y", padx = 5, pady = 5)
-  
-    lbl = tk.Label(frame, text="Hello")
-    lbl.grid(column=0, row=0)
+    PopupWindowConfiguration(root)
+    # lbl = tk.Label(frame, text="Hello")
+    # lbl.grid(column=0, row=0)
     
     root.mainloop()
 #-----------------------------
