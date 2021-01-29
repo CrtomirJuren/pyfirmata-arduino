@@ -133,10 +133,11 @@ class GUI_IO_control2(tk.Frame):
 
         # each widget has its own variable so it can be easily configured
         # self.mode_vars = []
+        self.control_variant = None
         self.pin_number_lbl_var = tk.StringVar()
         self.pin_mode_lbl_var = tk.StringVar()
         self.string_var = tk.StringVar()
-        
+
         # self.string_var.set('0.00')
         self.pin_number_lbl_var.set('')
         self.pin_mode_lbl_var.set('')
@@ -182,10 +183,25 @@ class GUI_IO_control2(tk.Frame):
                 self.pin_class.write(True)
 
     def configure(self, pyfirmata_config):
+
+        # translate pyfirmata_config to readable
+        self.pin_type = pyfirmata_config.split(':')[0]
+        self.pin_number = pyfirmata_config.split(':')[1]
+        self.pin_mode = pyfirmata_config.split(':')[2]
+
+        if self.pin_type == 'd' and self.pin_mode == 'i':
+            self.control_variant = 'digital_input'
+        if self.pin_type == 'd' and self.pin_mode == 'o':
+            self.control_variant = 'digital_output'
+        if self.pin_type == 'a' and self.pin_mode == 'i':
+            self.control_variant = 'analog_input'
+        if self.pin_type == 'a' and self.pin_mode == 'o':
+            self.control_variant = 'analog_output'
+        if self.pin_type == 'p' and self.pin_mode == 'o':
+            self.control_variant = 'pwm_output'
+
         # Button has three states : active, normal, disabled
-        # print(pyfirmata_config)        
-        self.pin_type, self.pin_number, self.pin_mode = pyfirmata_config.split(':')
-        
+        # configure label
         self.pin_number_lbl_var.set(self.pin_number)
         pin_mode = ''
         if self.pin_mode == 'i':
@@ -194,32 +210,37 @@ class GUI_IO_control2(tk.Frame):
             pin_mode = 'OUT'
         if self.pin_mode == 'p':
             pin_mode = 'PWM'
-            
+
         self.pin_mode_lbl_var.set(pin_mode)
-        
+
         # if digital input
-        if self.pin_type == 'd' and self.pin_mode == 'i':
+        if self.control_variant == 'digital_input':
             #disable button
             self.pin_state_btn.configure(text="")
             self.pin_state_btn.configure(state = tk.DISABLED)
-            
-        if self.pin_type == 'd' and self.pin_mode == 'o':
+
+        if self.control_variant == 'digital_output':
+            #enable button
             self.pin_state_btn.configure(state = tk.NORMAL)
-            
-        if self.pin_type == 'a' and self.pin_mode == 'i':
+            pass
+
+        if self.control_variant == 'analog_input':
             #disable button
             self.pin_state_btn.configure(text="")
             self.pin_state_btn.configure(state = tk.DISABLED)
-        
-        if self.pin_type == 'a' and self.pin_mode == 'o':
+            pass
+
+        if self.control_variant == 'analog_output':
             #disable button
             self.pin_state_btn.configure(text="")
             self.pin_state_btn.configure(state = tk.DISABLED)
-        
-        if self.pin_type == 'p' and self.pin_mode == 'o':
+            pass
+
+        if self.control_variant == 'pwm_output':
             #disable button
             self.pin_state_btn.configure(text="")
             self.pin_state_btn.configure(state = tk.DISABLED)
+            pass
 
     def read(self):
         # if pin is digital and input
@@ -248,25 +269,26 @@ class GUI_IO_control2(tk.Frame):
                 display = "{:.4f}".format(analog_value)
                 self.string_var.set(display)
 
+
 def main():
-    
+
     root = tk.Tk()
-    
+
     root.title("Welcome to LikeGeeks app")
     root.attributes("-topmost", True)
     root.lift()
-    
+
     frame = Frame(root, bg="silver")
     frame.pack(side = "right", fill="y", padx = 5, pady = 5)
-  
+
     # first load configuration for buttons data
     config_obj = JsonConfig('configuration.txt')
     pyfirmata_config_list = config_obj.get_data(True)
-    
+
     print(pyfirmata_config_list)
-    
+
     gui_io_controls = []
-    
+
     # 1. create widgets
     for index in range(len(pyfirmata_config_list)):
         gui_io_controls.append(GUI_IO_control2(root, frame))
@@ -274,10 +296,10 @@ def main():
     # 1. configure widgets
     for index, pyfirmata_config in enumerate(pyfirmata_config_list):
            gui_io_controls[index].configure(pyfirmata_config)
-    
+
     # lbl = tk.Label(frame, text="Hello")
     # lbl.grid(column=0, row=0)
-    
+
     root.mainloop()
 #-----------------------------
 if __name__ == "__main__":
