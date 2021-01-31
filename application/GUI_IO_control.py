@@ -13,6 +13,9 @@ from tkinter import Frame
 
 from JsonConfig import JsonConfig
 
+import pyfirmata2
+from pyfirmata2 import Arduino
+
 class GUI_IO_control(tk.Frame):
     def __init__(self, parent, parent_frame, *args, **kwargs):
 
@@ -166,7 +169,7 @@ class GUI_IO_control(tk.Frame):
 
 
 class DigitalOutput():
-    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+    def __init__(self, parent, frame, board, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
         self.parent = parent
@@ -176,18 +179,26 @@ class DigitalOutput():
         self.pin_number = pin_number
         self.pin_mode = pin_mode
         self.simulated = simulated
-        
+      
+        # pyfirmata create pin
+        self.board = board
+        pyfirmata_pin_config = pin_type+':'+pin_number+':'+pin_mode
+
         # pin number: label
         self.pin_number_lbl = tk.Label(self.frame, width = 5, text = self.pin_number)
         self.pin_mode_lbl = tk.Label(self.frame, width = 5, text = 'DO')  # without text and textvariable
         # output control: button
-        self.pin_state_btn = tk.Button(self.frame, text="Low", relief=tk.SUNKEN, width = 5, command=self.clicked)
+        self.pin_state_btn = tk.Button(self.frame, text="Off", relief=tk.RAISED, width = 5, command=self.clicked)
 
         # grid
         self.pin_number_lbl.grid(row=0,column=0)
         self.pin_mode_lbl.grid(row=0,column=1)
         self.pin_state_btn.grid(row=0,column=2)
-    
+        
+        # initialize pyfirmata
+        if not simulated:
+            self.pin_class =  self.board.get_pin(pyfirmata_pin_config)
+
     def destroy(self):
         # destroy widgets in frame
         for widget in self.frame.winfo_children():
@@ -196,13 +207,13 @@ class DigitalOutput():
         self.frame.destroy()
     
     def clicked(self):
-        if self.pin_state_btn['text'] == "High":
-            self.pin_state_btn.configure(text="Low", relief=tk.SUNKEN)
+        if self.pin_state_btn['text'] == "On":
+            self.pin_state_btn.configure(text="Off", relief=tk.RAISED)
             # self.lbl.configure(text="  ON  ", bg="green")
             if not self.simulated:
                 self.pin_class.write(False)
         else:
-            self.pin_state_btn.configure(text="High", relief=tk.RAISED)
+            self.pin_state_btn.configure(text="On", relief=tk.SUNKEN)
             # self.lbl.configure(text="  OFF ", bg="red")
             if not self.simulated:
                 self.pin_class.write(True)
@@ -214,12 +225,16 @@ class DigitalOutput():
         pass
 
 class DigitalInput():
-    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+    def __init__(self, parent, frame, board, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
         self.parent = parent
         self.frame = frame
 
+         # pyfirmata create pin
+        self.board = board
+        pyfirmata_pin_config = pin_type+':'+pin_number+':'+pin_mode
+  
         self.pin_type = pin_type
         self.pin_number = pin_number
         self.pin_mode = pin_mode
@@ -235,6 +250,11 @@ class DigitalInput():
         self.pin_number_lbl.grid(row=0,column=0)
         self.pin_mode_lbl.grid(row=0,column=1)
         self.led.grid(row=0,column=2)
+    
+        # initialize pyfirmata
+        if not simulated:
+            self.pin_class =  self.board.get_pin(pyfirmata_pin_config)
+
     
     def destroy(self):
         # destroy widgets in frame
@@ -266,16 +286,21 @@ class DigitalInput():
         pass            
     
 class AnalogInput():
-    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+    def __init__(self, parent, frame, board, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
         self.parent = parent
         self.frame = frame
 
+         # pyfirmata create pin
+        self.board = board
+        pyfirmata_pin_config = pin_type+':'+pin_number+':'+pin_mode
+
         self.pin_type = pin_type
         self.pin_number = pin_number
         self.pin_mode = pin_mode
         self.simulated = simulated        
+        
         #Output Floats on right Side
         self.value_var = tk.DoubleVar()
         self.value_var.set('_.__')
@@ -292,6 +317,11 @@ class AnalogInput():
         self.pin_mode_lbl.grid(row=0,column=1)
         self.entry.grid(row=0,column=2)
         self.unit_lbl.grid(row=0,column=3)
+    
+        # initialize pyfirmata
+        if not simulated:
+            self.pin_class =  self.board.get_pin(pyfirmata_pin_config)
+
     
     def destroy(self):
         # destroy widgets in frame
@@ -313,12 +343,16 @@ class AnalogInput():
             self.string_var.set(display)
 
 class AnalogOutput():
-    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+    def __init__(self, parent, frame, board, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
         self.parent = parent
         self.frame = frame
 
+        # pyfirmata create pin
+        self.board = board
+        pyfirmata_pin_config = pin_type+':'+pin_number+':'+pin_mode
+    
         self.pin_type = pin_type
         self.pin_number = pin_number
         self.pin_mode = pin_mode
@@ -333,7 +367,7 @@ class AnalogOutput():
 
         self.entry = tk.Entry(self.frame, width = 5, bd =5, textvariable=self.value_var)
         self.unit_lbl = tk.Label(self.frame, width = 5, text = '[V]')
-        self.pin_state_btn = tk.Button(self.frame, text="Disabled", relief=tk.SUNKEN, width = 5, command=self.clicked)
+        self.pin_state_btn = tk.Button(self.frame, text="Disabled", relief=tk.RAISED, width = 10, command=self.clicked)
 
 
         # grid
@@ -342,6 +376,11 @@ class AnalogOutput():
         self.entry.grid(row=0,column=2)
         self.unit_lbl.grid(row=0,column=3)
         self.pin_state_btn.grid(row=0,column=4)
+
+        # initialize pyfirmata
+        if not simulated:
+            self.pin_class =  self.board.get_pin(pyfirmata_pin_config)
+
     
     def destroy(self):
         # destroy widgets in frame
@@ -352,12 +391,12 @@ class AnalogOutput():
     
     def clicked(self):
         if self.pin_state_btn['text'] == "Enabled":
-            self.pin_state_btn.configure(text="Disabled", relief=tk.SUNKEN)
+            self.pin_state_btn.configure(text="Disabled", relief=tk.RAISED)
             # self.lbl.configure(text="  ON  ", bg="green")
             if not self.simulated:
                 pass
         else:
-            self.pin_state_btn.configure(text="Enabled", relief=tk.RAISED)
+            self.pin_state_btn.configure(text="Enabled", relief=tk.SUNKEN)
             # self.lbl.configure(text="  OFF ", bg="red")
             if not self.simulated:
                 pass
@@ -369,11 +408,15 @@ class AnalogOutput():
         pass
 
 class PWMOutput():
-    def __init__(self, parent, frame, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
+    def __init__(self, parent, frame, board, pin_type, pin_number, pin_mode, simulated, *args, **kwargs):
 
         # tk.Frame.__init__(self, parent)
         self.parent = parent
         self.frame = frame
+
+        # pyfirmata create pin
+        self.board = board
+        pyfirmata_pin_config = pin_type+':'+pin_number+':'+pin_mode
 
         self.pin_type = pin_type
         self.pin_number = pin_number
@@ -391,12 +434,15 @@ class PWMOutput():
 
         self.pin_state_btn = tk.Button(self.frame, text="Disabled", relief=tk.SUNKEN, width = 5, command=self.clicked)
 
-
         # grid
         self.pin_number_lbl.grid(row=0,column=0)
         self.pin_mode_lbl.grid(row=0,column=1)
         self.pin_state_btn.grid(row=0,column=3)
-        
+
+        # initialize pyfirmata
+        if not simulated:
+            self.pin_class =  self.board.get_pin(pyfirmata_pin_config)
+      
         
     def destroy(self):
         # destroy widgets in frame
@@ -422,7 +468,6 @@ class PWMOutput():
     
     def write(self):
         pass
-
     
 io_controls = []
 
@@ -447,7 +492,15 @@ def main():
     # first load configuration for buttons data
     config_obj = JsonConfig('configuration.txt')
     pyfirmata_config_list = config_obj.get_data(True)
+    board = None
     
+    # if not simulated:
+    #     port = pyfirmata2.Arduino.AUTODETECT
+    #     print("Setting up the connection to the board ...")
+    #     board = pyfirmata2.Arduino(port)
+    #     # enable arduino sampling --> for inputs
+    #     # self.board.samplingOn()
+        
     # 1. configure widgets
     for index, pyfirmata_config in enumerate(pyfirmata_config_list):
         frame = tk.Frame(root, bg="silver")
@@ -457,27 +510,26 @@ def main():
         pin_type = pyfirmata_config.split(':')[0]
         pin_number = pyfirmata_config.split(':')[1]
         pin_mode = pyfirmata_config.split(':')[2]
+        
+        
         # digital_input'
         if pin_type == 'd' and pin_mode == 'i':
-            control = DigitalInput(root, frame, pin_type, pin_number, pin_mode, simulated)
+            control = DigitalInput(root, frame, board, pin_type, pin_number, pin_mode, simulated)
         #'digital_output'
         if pin_type == 'd' and pin_mode == 'o':
-            control = DigitalOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+            control = DigitalOutput(root, frame, board, pin_type, pin_number, pin_mode, simulated)
         # 'analog_input'    
         if pin_type == 'a' and pin_mode == 'i':
-            control = AnalogInput(root, frame, pin_type, pin_number, pin_mode, simulated)
+            control = AnalogInput(root, frame, board, pin_type, pin_number, pin_mode, simulated)
         # 'analog_output'
         if pin_type == 'a' and pin_mode == 'o':
-            control = AnalogOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+            control = AnalogOutput(root, frame, board, pin_type, pin_number, pin_mode, simulated)
         # 'pwm_output'    
         if pin_type == 'p' and pin_mode == 'o': 
-            control = PWMOutput(root, frame, pin_type, pin_number, pin_mode, simulated)
+            control = PWMOutput(root, frame, board, pin_type, pin_number, pin_mode, simulated)
         
         io_controls.append(control)
         
-    # lbl = tk.Label(frame, text="Hello")
-    # lbl.grid(column=0, row=0)
-
     root.mainloop()
 #-----------------------------
 if __name__ == "__main__":

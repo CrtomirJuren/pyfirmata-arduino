@@ -63,7 +63,7 @@ class MainGUI(tk.Frame):
         self.reconfiguration = False
         self.io_controls = []
 
-        self.is_hardware = False
+        self.HW_simulation = False
         # set title
         self.parent.title(APP_TITLE)
         # set icon
@@ -73,7 +73,7 @@ class MainGUI(tk.Frame):
 
         # self.parent.bind('<Escape>', self.button_exit_call())
 
-        if self.is_hardware:
+        if not self.HW_simulation:
             self.port = pyfirmata2.Arduino.AUTODETECT
             print("Setting up the connection to the board ...")
             self.board = pyfirmata2.Arduino(self.port)
@@ -129,21 +129,22 @@ class MainGUI(tk.Frame):
             pin_type = pyfirmata_config.split(':')[0]
             pin_number = pyfirmata_config.split(':')[1]
             pin_mode = pyfirmata_config.split(':')[2]
+
             # digital_input'
             if pin_type == 'd' and pin_mode == 'i':
-                control = DigitalInput(root, frame, pin_type, pin_number, pin_mode)
+                control = DigitalInput(self.parent, self.left_frame, self.board, pin_type, pin_number, pin_mode, self.HW_simulation)
             #'digital_output'
             if pin_type == 'd' and pin_mode == 'o':
-                control = DigitalOutput(root, frame, pin_type, pin_number, pin_mode)
+                control = DigitalOutput(self.parent, self.left_frame, self.board, pin_type, pin_number, pin_mode, self.HW_simulation)
             # 'analog_input'    
             if pin_type == 'a' and pin_mode == 'i':
-                control = AnalogInput(root, frame, pin_type, pin_number, pin_mode)
+                control = AnalogInput(self.parent, self.left_frame, self.board, pin_type, pin_number, pin_mode, self.HW_simulation)
             # 'analog_output'
             if pin_type == 'a' and pin_mode == 'o':
-                control = AnalogOutput(root, frame, pin_type, pin_number, pin_mode)
+                control = AnalogOutput(self.parent, self.left_frame, self.board, pin_type, pin_number, pin_mode, self.HW_simulation)
             # 'pwm_output'    
             if pin_type == 'p' and pin_mode == 'o': 
-                control = PWMOutput(root, frame, pin_type, pin_number, pin_mode)
+                control = PWMOutput(self.parent, self.left_frame, self.board, pin_type, pin_number, pin_mode, self.HW_simulation)
             
             self.io_controls.append(control)
             
@@ -186,7 +187,7 @@ class MainGUI(tk.Frame):
 
         self.update_progress_bar()
 
-        if self.is_hardware:
+        if not self.HW_simulation:
             pass
 
         # for gui_io_control in self.gui_io_controls:
@@ -201,7 +202,7 @@ class MainGUI(tk.Frame):
         # cancel update clock event
         self.parent.after_cancel(self._update_clock_event)
         # close pyfirmata communication
-        if self.is_hardware:
+        if not self.HW_simulation:
             self.board.samplingOff()
             self.board.exit()
         time.sleep(1)
