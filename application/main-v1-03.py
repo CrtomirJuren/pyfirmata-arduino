@@ -30,7 +30,7 @@ from pyfirmata2 import Arduino
 # my files
 from JsonConfig import JsonConfig
 from PopupWindowConfiguration import PopupWindowConfiguration
-from GUI_IO_control import GUI_IO_control, GUI_IO_control2
+from GUI_IO_control import GUI_IO_control,GUI_IO_control2
 
 APP_TITLE = ("Python GUI Template")
 LARGE_FONT = ("Verdana", 12)
